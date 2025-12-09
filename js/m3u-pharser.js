@@ -7,6 +7,9 @@ const M3UParser = {
     // Playlist URL
     PLAYLIST_URL: 'https://iptv-org.github.io/iptv/index.m3u8',
     
+    // PHP Proxy
+    PHP_PROXY: 'proxy.php?url=',
+    
     // CORS Proxy (if needed)
     CORS_PROXIES: [
         'https://corsproxy.io/?',
@@ -61,7 +64,9 @@ const M3UParser = {
 
         // If all proxies fail, try PHP proxy
         try {
-            const response = await fetch('php/proxy.php?url=' + encodeURIComponent(url));
+            const phpUrl = this.PHP_PROXY + encodeURIComponent(url);
+            console.log('Trying PHP proxy:', phpUrl);
+            const response = await fetch(phpUrl);
             if (response.ok) {
                 const content = await response.text();
                 const channels = this.parse(content);
