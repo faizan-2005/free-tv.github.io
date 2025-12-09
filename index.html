@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>IPTV - Smart TV</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HLS.js for streaming -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff6600',
+                        secondary: '#1a1a2e',
+                        accent: '#16213e',
+                        surface: '#0f0f23',
+                        'surface-light': '#1a1a3e'
+                    },
+                    fontFamily: {
+                        tv: ['Arial', 'Helvetica', 'sans-serif']
+                    },
+                    fontSize: {
+                        'tv-xs': '1rem',
+                        'tv-sm': '1.25rem',
+                        'tv-base': '1.5rem',
+                        'tv-lg': '2rem',
+                        'tv-xl': '2.5rem',
+                        'tv-2xl': '3rem',
+                        'tv-3xl': '4rem'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-surface text-white font-tv overflow-hidden">
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-surface z-50 flex items-center justify-center">
+        <div class="text-center">
+            <div class="loading-spinner mb-6"></div>
+            <h1 class="text-tv-xl text-primary font-bold">IPTV</h1>
+            <p class="text-tv-sm text-gray-400 mt-2">Loading channels...</p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="app" class="hidden">
+        
+        <!-- Header / Navigation Bar -->
+        <header id="header" class="fixed top-0 left-0 right-0 z-40 bg-gradient-to-b from-surface via-surface/95 to-transparent py-4 px-8">
+            <div class="flex items-center justify-between">
+                <!-- Logo -->
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-primary rounded-xl flex items-center justify-center">
+                        <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+                        </svg>
+                    </div>
+                    <span class="text-tv-lg font-bold text-primary">IPTV</span>
+                </div>
+                
+                <!-- Main Navigation -->
+                <nav id="main-nav" class="flex items-center gap-2">
+                    <button class="nav-btn focusable active" data-section="home" data-nav-row="0" data-nav-col="0">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                        <span>Home</span>
+                    </button>
+                    <button class="nav-btn focusable" data-section="livetv" data-nav-row="0" data-nav-col="1">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 14H3V8h18v12z"/></svg>
+                        <span>Live TV</span>
+                    </button>
+                    <button class="nav-btn focusable" data-section="favorites" data-nav-row="0" data-nav-col="2">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                        <span>Favorites</span>
+                    </button>
+                    <button class="nav-btn focusable" data-section="recent" data-nav-row="0" data-nav-col="3">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                        <span>Recent</span>
+                    </button>
+                    <button class="nav-btn focusable" data-section="search" data-nav-row="0" data-nav-col="4">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <span>Search</span>
+                    </button>
+                    <button class="nav-btn focusable" data-section="settings" data-nav-row="0" data-nav-col="5">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        <span>Settings</span>
+                    </button>
+                </nav>
+                
+                <!-- Time & Notifications -->
+                <div class="flex items-center gap-6">
+                    <div id="notification-badge" class="relative hidden">
+                        <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+                        <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">3</span>
+                    </div>
+                    <div id="clock" class="text-tv-lg font-bold text-gray-300">00:00</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Sections -->
+        <main class="pt-28 pb-8 min-h-screen">
+            
+            <!-- Home Section -->
+            <section id="home-section" class="section active px-8">
+                <!-- Hero Carousel -->
+                <div id="carousel" class="relative h-96 mb-8 rounded-2xl overflow-hidden">
+                    <div id="carousel-track" class="flex transition-transform duration-500 ease-out h-full">
+                        <!-- Carousel slides will be injected -->
+                    </div>
+                    <div id="carousel-indicators" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                        <!-- Indicators will be injected -->
+                    </div>
+                    <button id="carousel-prev" class="carousel-nav-btn left-4 focusable" data-nav-row="1" data-nav-col="0">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    </button>
+                    <button id="carousel-next" class="carousel-nav-btn right-4 focusable" data-nav-row="1" data-nav-col="1">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                    </button>
+                </div>
+
+                <!-- Categories -->
+                <div class="mb-8">
+                    <h2 class="text-tv-lg font-bold mb-4 text-gray-200">Categories</h2>
+                    <div id="categories-grid" class="grid grid-cols-6 gap-4">
+                        <!-- Category cards will be injected -->
+                    </div>
+                </div>
+
+                <!-- Continue Watching -->
+                <div id="continue-watching-section" class="mb-8 hidden">
+                    <h2 class="text-tv-lg font-bold mb-4 text-gray-200">Continue Watching</h2>
+                    <div id="continue-watching-grid" class="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        <!-- Recent channels will be injected -->
+                    </div>
+                </div>
+
+                <!-- Popular Channels -->
+                <div class="mb-8">
+                    <h2 class="text-tv-lg font-bold mb-4 text-gray-200">Popular Channels</h2>
+                    <div id="popular-channels-grid" class="grid grid-cols-6 gap-4">
+                        <!-- Popular channels will be injected -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Live TV Section -->
+            <section id="livetv-section" class="section px-8">
+                <div class="flex gap-6 h-full">
+                    <!-- Category Sidebar -->
+                    <aside id="category-sidebar" class="w-72 flex-shrink-0">
+                        <h3 class="text-tv-base font-bold mb-4 text-gray-300">Categories</h3>
+                        <div id="category-list" class="space-y-2">
+                            <button class="category-btn focusable active" data-category="all" data-nav-row="1" data-nav-col="0">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+                                <span>All Channels</span>
+                                <span class="channel-count">0</span>
+                            </button>
+                        </div>
+                    </aside>
+
+                    <!-- Channel Grid -->
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 id="current-category-title" class="text-tv-lg font-bold text-gray-200">All Channels</h2>
+                            <span id="channel-count" class="text-tv-sm text-gray-400">0 channels</span>
+                        </div>
+                        <div id="channel-grid" class="grid grid-cols-5 gap-4 max-h-[calc(100vh-280px)] overflow-y-auto scrollbar-hide pr-2">
+                            <!-- Channel cards will be injected -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Favorites Section -->
+            <section id="favorites-section" class="section px-8">
+                <h2 class="text-tv-xl font-bold mb-6 text-gray-200">
+                    <svg class="w-10 h-10 inline-block mr-3 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    My Favorites
+                </h2>
+                <div id="favorites-grid" class="grid grid-cols-6 gap-4">
+                    <!-- Favorite channels will be injected -->
+                </div>
+                <div id="no-favorites" class="hidden text-center py-20">
+                    <svg class="w-24 h-24 mx-auto text-gray-600 mb-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    <h3 class="text-tv-lg text-gray-400">No favorites yet</h3>
+                    <p class="text-tv-sm text-gray-500 mt-2">Press the ★ button on any channel to add it to favorites</p>
+                </div>
+            </section>
+
+            <!-- Recent Section -->
+            <section id="recent-section" class="section px-8">
+                <h2 class="text-tv-xl font-bold mb-6 text-gray-200">
+                    <svg class="w-10 h-10 inline-block mr-3 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                    Recently Watched
+                </h2>
+                <div id="recent-grid" class="grid grid-cols-6 gap-4">
+                    <!-- Recent channels will be injected -->
+                </div>
+                <div id="no-recent" class="hidden text-center py-20">
+                    <svg class="w-24 h-24 mx-auto text-gray-600 mb-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                    <h3 class="text-tv-lg text-gray-400">No recent channels</h3>
+                    <p class="text-tv-sm text-gray-500 mt-2">Start watching to see your history here</p>
+                </div>
+            </section>
+
+            <!-- Search Section -->
+            <section id="search-section" class="section px-8">
+                <div class="max-w-4xl mx-auto">
+                    <div class="relative mb-8">
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            class="focusable w-full bg-surface-light border-2 border-gray-700 rounded-xl py-4 px-6 pl-16 text-tv-base text-white placeholder-gray-500 focus:border-primary focus:outline-none"
+                            placeholder="Search channels..."
+                            data-nav-row="1"
+                            data-nav-col="0"
+                        >
+                        <svg class="absolute left-5 top-1/2 transform -translate-y-1/2 w-8 h-8 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <button id="voice-search-btn" class="focusable absolute right-4 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-primary" data-nav-row="1" data-nav-col="1">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                        </button>
+                    </div>
+                    
+                    <div id="search-results" class="hidden">
+                        <h3 class="text-tv-lg font-bold mb-4 text-gray-300">Search Results</h3>
+                        <div id="search-results-grid" class="grid grid-cols-5 gap-4">
+                            <!-- Search results will be injected -->
+                        </div>
+                    </div>
+                    
+                    <div id="search-empty" class="text-center py-20">
+                        <svg class="w-24 h-24 mx-auto text-gray-600 mb-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <h3 class="text-tv-lg text-gray-400">Search for channels</h3>
+                        <p class="text-tv-sm text-gray-500 mt-2">Type a channel name to find it</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings-section" class="section px-8">
+                <h2 class="text-tv-xl font-bold mb-6 text-gray-200">Settings</h2>
+                
+                <div class="max-w-4xl space-y-6">
+                    <!-- Display Settings -->
+                    <div class="settings-card">
+                        <h3 class="settings-title">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/></svg>
+                            Display
+                        </h3>
+                        <div class="settings-options">
+                            <div class="settings-option">
+                                <span>Theme</span>
+                                <div class="flex gap-2">
+                                    <button id="theme-dark" class="focusable setting-btn active" data-nav-row="1" data-nav-col="0">Dark</button>
+                                    <button id="theme-light" class="focusable setting-btn" data-nav-row="1" data-nav-col="1">Light</button>
+                                </div>
+                            </div>
+                            <div class="settings-option">
+                                <span>Resolution</span>
+                                <select id="resolution-select" class="focusable setting-select" data-nav-row="2" data-nav-col="0">
+                                    <option value="auto">Auto</option>
+                                    <option value="720p">HD (720p)</option>
+                                    <option value="1080p">Full HD (1080p)</option>
+                                    <option value="4k">4K UHD</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Playback Settings -->
+                    <div class="settings-card">
+                        <h3 class="settings-title">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            Playback
+                        </h3>
+                        <div class="settings-options">
+                            <div class="settings-option">
+                                <span>Auto-play</span>
+                                <button id="autoplay-toggle" class="focusable toggle-btn active" data-nav-row="3" data-nav-col="0">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                            <div class="settings-option">
+                                <span>Remember Position</span>
+                                <button id="remember-toggle" class="focusable toggle-btn active" data-nav-row="4" data-nav-col="0">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Parental Control -->
+                    <div class="settings-card">
+                        <h3 class="settings-title">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                            Parental Control
+                        </h3>
+                        <div class="settings-options">
+                            <div class="settings-option">
+                                <span>Enable PIN Lock</span>
+                                <button id="pin-toggle" class="focusable toggle-btn" data-nav-row="5" data-nav-col="0">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                            <div class="settings-option">
+                                <span>Change PIN</span>
+                                <button id="change-pin-btn" class="focusable setting-btn" data-nav-row="6" data-nav-col="0">Change</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Language -->
+                    <div class="settings-card">
+                        <h3 class="settings-title">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+                            Language
+                        </h3>
+                        <div class="settings-options">
+                            <div class="settings-option">
+                                <span>Interface Language</span>
+                                <select id="language-select" class="focusable setting-select" data-nav-row="7" data-nav-col="0">
+                                    <option value="en">English</option>
+                                    <option value="es">Español</option>
+                                    <option value="fr">Français</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="pt">Português</option>
+                                    <option value="ar">العربية</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- About -->
+                    <div class="settings-card">
+                        <h3 class="settings-title">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                            About
+                        </h3>
+                        <div class="settings-options">
+                            <div class="settings-option">
+                                <span>Version</span>
+                                <span class="text-gray-400">1.0.0</span>
+                            </div>
+                            <div class="settings-option">
+                                <span>Clear Cache</span>
+                                <button id="clear-cache-btn" class="focusable setting-btn" data-nav-row="8" data-nav-col="0">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Video Player Overlay -->
+        <div id="player-overlay" class="fixed inset-0 bg-black z-50 hidden">
+            <!-- Video Element -->
+            <video id="video-player" class="w-full h-full" playsinline></video>
+            
+            <!-- Player Controls -->
+            <div id="player-controls" class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/50 transition-opacity duration-300">
+                <!-- Top Bar -->
+                <div class="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button id="player-back" class="focusable player-btn" data-nav-row="0" data-nav-col="0">
+                            <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        </button>
+                        <div>
+                            <h2 id="player-channel-name" class="text-tv-lg font-bold">Channel Name</h2>
+                            <p id="player-program-name" class="text-tv-sm text-gray-400">Now Playing</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span id="player-time" class="text-tv-base text-gray-300">00:00</span>
+                        <button id="player-favorite" class="focusable player-btn" data-nav-row="0" data-nav-col="1">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Center Controls -->
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-8">
+                    <button id="player-prev" class="focusable player-btn-lg" data-nav-row="1" data-nav-col="0">
+                        <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                    </button>
+                    <button id="player-rewind" class="focusable player-btn-lg" data-nav-row="1" data-nav-col="1">
+                        <svg class="w-14 h-14" fill="currentColor" viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+                    </button>
+                    <button id="player-playpause" class="focusable player-btn-xl" data-nav-row="1" data-nav-col="2">
+                        <svg id="play-icon" class="w-20 h-20 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="pause-icon" class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <button id="player-forward" class="focusable player-btn-lg" data-nav-row="1" data-nav-col="3">
+                        <svg class="w-14 h-14" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+                    </button>
+                    <button id="player-next" class="focusable player-btn-lg" data-nav-row="1" data-nav-col="4">
+                        <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                    </button>
+                </div>
+
+                <!-- Bottom Bar -->
+                <div class="absolute bottom-0 left-0 right-0 p-6">
+                    <!-- Progress Bar -->
+                    <div class="flex items-center gap-4 mb-4">
+                        <span id="player-current-time" class="text-tv-sm text-gray-400 w-20">Live</span>
+                        <div class="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div id="player-progress" class="h-full bg-primary rounded-full" style="width: 100%"></div>
+                        </div>
+                        <span id="player-duration" class="text-tv-sm text-gray-400 w-20 text-right">--:--</span>
+                    </div>
+                    
+                    <!-- Bottom Controls -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <button id="player-mute" class="focusable player-btn" data-nav-row="2" data-nav-col="0">
+                                <svg id="volume-icon" class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                                <svg id="mute-icon" class="w-8 h-8 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                            </button>
+                            <div class="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div id="volume-bar" class="h-full bg-white rounded-full" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-4">
+                            <button id="player-subtitles" class="focusable player-btn" data-nav-row="2" data-nav-col="1">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>
+                            </button>
+                            <button id="player-audio" class="focusable player-btn" data-nav-row="2" data-nav-col="2">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                            </button>
+                            <button id="player-quality" class="focusable player-btn" data-nav-row="2" data-nav-col="3">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-8 12H9.5v-2h-2v2H6V9h1.5v2.5h2V9H11v6zm2-6h4c.55 0 1 .45 1 1v4c0 .55-.45 1-1 1h-4V9zm1.5 4.5h2v-3h-2v3z"/></svg>
+                            </button>
+                            <button id="player-pip" class="focusable player-btn" data-nav-row="2" data-nav-col="4">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/></svg>
+                            </button>
+                            <button id="player-fullscreen" class="focusable player-btn" data-nav-row="2" data-nav-col="5">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="player-loading" class="absolute inset-0 flex items-center justify-center bg-black/50 hidden">
+                <div class="loading-spinner-lg"></div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="player-error" class="absolute inset-0 flex items-center justify-center bg-black/90 hidden">
+                <div class="text-center">
+                    <svg class="w-24 h-24 mx-auto text-red-500 mb-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    <h3 class="text-tv-lg text-white mb-2">Stream Unavailable</h3>
+                    <p id="player-error-message" class="text-tv-sm text-gray-400 mb-6">Unable to load this channel. It may be offline or geo-restricted.</p>
+                    <button id="player-retry" class="focusable bg-primary text-white px-8 py-3 rounded-lg text-tv-base font-bold">
+                        Retry
+                    </button>
+                </div>
+            </div>
+
+            <!-- Channel Info Toast -->
+            <div id="channel-info-toast" class="absolute bottom-32 left-6 bg-surface-light/95 backdrop-blur rounded-xl p-4 hidden animate-slide-up">
+                <div class="flex items-center gap-4">
+                    <img id="toast-channel-logo" class="w-16 h-16 rounded-lg object-cover bg-gray-800" src="" alt="">
+                    <div>
+                        <h4 id="toast-channel-name" class="text-tv-base font-bold">Channel Name</h4>
+                        <p id="toast-channel-category" class="text-tv-sm text-gray-400">Category</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Bar -->
+        <div id="quick-actions" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-surface-light/90 backdrop-blur rounded-full px-6 py-3 flex items-center gap-6 z-30">
+            <div class="flex items-center gap-2 text-tv-xs text-gray-400">
+                <kbd class="kbd">↑↓←→</kbd>
+                <span>Navigate</span>
+            </div>
+            <div class="flex items-center gap-2 text-tv-xs text-gray-400">
+                <kbd class="kbd">Enter</kbd>
+                <span>Select</span>
+            </div>
+            <div class="flex items-center gap-2 text-tv-xs text-gray-400">
+                <kbd class="kbd">Back</kbd>
+                <span>Return</span>
+            </div>
+            <div class="flex items-center gap-2 text-tv-xs text-gray-400">
+                <kbd class="kbd">F</kbd>
+                <span>Favorite</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIN Modal -->
+    <div id="pin-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center">
+        <div class="bg-surface-light rounded-2xl p-8 max-w-md w-full mx-4">
+            <h3 class="text-tv-lg font-bold text-center mb-6">Enter PIN</h3>
+            <div class="flex justify-center gap-4 mb-6">
+                <input type="password" maxlength="1" class="pin-input focusable" data-pin="0">
+                <input type="password" maxlength="1" class="pin-input focusable" data-pin="1">
+                <input type="password" maxlength="1" class="pin-input focusable" data-pin="2">
+                <input type="password" maxlength="1" class="pin-input focusable" data-pin="3">
+            </div>
+            <div class="flex gap-4">
+                <button id="pin-cancel" class="focusable flex-1 py-3 bg-gray-700 rounded-lg text-tv-base">Cancel</button>
+                <button id="pin-confirm" class="focusable flex-1 py-3 bg-primary rounded-lg text-tv-base font-bold">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-24 right-8 bg-surface-light/95 backdrop-blur rounded-xl px-6 py-4 z-50 hidden transform translate-x-full transition-transform duration-300">
+        <div class="flex items-center gap-3">
+            <svg id="toast-icon" class="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            <span id="toast-message" class="text-tv-sm">Message</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/m3u-parser.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
