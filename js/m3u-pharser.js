@@ -5,7 +5,7 @@
 
 const M3UParser = {
     // Playlist URL
-    PLAYLIST_URL: 'https://iptv-org.github.io/iptv/index.m3u8',
+    PLAYLIST_URL: 'https://iptv-org.github.io/iptv/index.m3u',
     
     // PHP Proxy
     PHP_PROXY: 'proxy.php?url=',
